@@ -65,6 +65,9 @@ git add .
 git commit -m "..."
 git push -u origin <tool-branch-name>
 
+# Faqat bitta branchni yuklab olish
+git clone --branch <branch-name> --single-branch git@github.com:SaidAbbos96/dataset-tools.git
+
 🔔 Eslatma
 
 #Har bir tool branch ichida alohida:
