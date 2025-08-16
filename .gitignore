@@ -1,0 +1,45 @@
+# -----------------------------------------------------------------------------
+# ✅ COMMON IGNORE for tools
+# -----------------------------------------------------------------------------
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtualenv / venv
+venv/
+.env/
+.venv/
+ENV/
+env/
+
+# NodeJS
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDEs
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# CursorAI / Code suggestions / experimental
+.cursor/
+.cursor-cache/
+
+# Logs
+*.log
+
+#ishlanayotgan papkalarini taqiqlash
+files/**/*
+!files/*
+!files/finish/
+!files/src/test.pdf
