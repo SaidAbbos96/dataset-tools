@@ -37,7 +37,7 @@ Thumbs.db
 
 # Logs
 *.log
-
+*.env
 #ishlanayotgan papkalarini taqiqlash
 files/**/*
 !files/*
