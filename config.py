@@ -1,4 +1,5 @@
 from pathlib import Path
+import threading
 from dotenv import load_dotenv
 import os
 
@@ -31,6 +32,11 @@ SRC_DIR.mkdir(parents=True, exist_ok=True)
 
 TEMP_DIR = ROOT / "files" / "finish" / "temp"
 TEMP_DIR.mkdir(parents=True, exist_ok=True)
+
+# Global o'zgaruvchilar va flaglar
+should_exit = False
+processed_chunks = []
+
 
 PROMTS = {
     "system": """You are generating high-quality TRAINING DATA for a national Uzbek AI assistant.

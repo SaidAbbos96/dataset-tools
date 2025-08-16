@@ -1,131 +1,17 @@
 import time
-
-from api import call_llm_api, get_ai_api_client
 import config
+from conversations import ConversationConfig, get_conversations
 import data_validation
 from functools import partial
-import json
-from typing import Dict, List, Optional, Union
-from dataclasses import dataclass
 import threading
-import sys
 import signal
-from config import OUT_DIR, SRC_DIR, TEMP_DIR
+from config import OUT_DIR, SRC_DIR, should_exit, processed_chunks
 import utils
-
-# Global o'zgaruvchilar va flaglar
-should_exit = False
-processed_chunks = []
-
-
-@dataclass
-class ConversationConfig:
-    api_url: str
-    api_key: str
-    model_name: str
-    system_prompt: Optional[str] = None
-    user_prompt: Optional[str] = None
-    resource: Optional[str] = None
-    min_conversations: int = 1
-    max_conversations: int = 10
-    min_messages: int = 4
-    max_messages: int = 12
-    json_schema: Optional[dict] = None
-
-
-def get_conversations(params: ConversationConfig) -> Union[List[Dict], bool]:
-    client = get_ai_api_client(params.api_url, params.api_key)
-    messages = [
-        {"role": "system", "content": params.system_prompt}
-    ]
-    if params.user_prompt:
-        messages.append({"role": "user", "content": params.user_prompt})
-    if params.resource:
-        messages.append(
-            {"role": "user", "content": f"info: {params.resource}"})
-
-    max_attempts = 3
-    for attempt in range(max_attempts):
-        try:
-            response = call_llm_api(
-                client=client,
-                model=params.model_name,
-                messages=messages,
-                response_format_type="json_schema",
-                json_schema=params.json_schema,
-                max_tokens=2000,
-                top_p=0.95,
-                frequency_penalty=0.2,
-                presence_penalty=0.2
-            )
-
-            # Parse response if needed
-            if isinstance(response, str):
-                response = json.loads(response)
-
-            # Validate the response
-            if data_validation.validate_conversation(response, params.json_schema["schema"]):
-                return response
-
-            print(f"Validation failed on attempt {attempt + 1}/{max_attempts}")
-
-        except Exception as e:
-            print(f"Attempt {attempt + 1}/{max_attempts} failed: {str(e)}")
-
-            # Don't wait on the last attempt
-            if attempt < max_attempts - 1:
-                # Exponential backoff (1, 2, 4 seconds)
-                wait_time = 2 ** attempt
-                print(f"Retrying in {wait_time} seconds...")
-                time.sleep(wait_time)
-
-    print(f"All {max_attempts} attempts failed")
-    return False
-
-
-def signal_handler(sig, frame, id: str = "1"):
-    global should_exit
-    print("\nTizim to'xtatilmoqda... Joriy natijalarni saqlab olaman")
-    should_exit = True
-    save_partial_results(id)
-
-
-def animate_loading():
-    chars = "/—\\|"
-    while not loading_complete:
-        for char in chars:
-            sys.stdout.write(f"\rYuklanmoqda {char}")
-            sys.stdout.flush()
-            time.sleep(0.1)
-            if loading_complete:
-                break
-
-
-def clear_partial_results(id: str = "1"):
-    for temp_file in TEMP_DIR.glob(f"partial_{id}*.json"):
-        try:
-            temp_file.unlink()
-        except:
-            pass
-
-
-def save_partial_results(id: str = "1"):
-    if not processed_chunks:
-        return
-
-    timestamp = int(time.time())
-    temp_file = TEMP_DIR / f"partial_{id}_{timestamp}.json"
-
-    try:
-        utils.save_data_as_json(temp_file, processed_chunks)
-        print(f"\nVaqtincha saqlangan natijalar: {temp_file}")
-    except Exception as e:
-        print(f"\nVaqtincha saqlashda xato: {e}")
 
 
 def process_files_with_ai(delimiter: str = "###", min_count: int = 1,
                           max_count: int = 10, min_items: int = 2, max_items: int = 8):
-    global should_exit, loading_complete, processed_chunks
+    global should_exit, processed_chunks
     uniq_id = utils.generate_uuid()
     # print(uniq_id)
 
@@ -161,7 +47,7 @@ def process_files_with_ai(delimiter: str = "###", min_count: int = 1,
     }
 
     # Signalni sozlash
-    signal.signal(signal.SIGINT, partial(signal_handler, id=uniq_id))
+    signal.signal(signal.SIGINT, partial(utils.signal_handler, id=uniq_id))
     # Vaqt hisobi boshlanishi
     start_time = time.time()
     # Fayllar ro'yxatini olish
@@ -215,9 +101,10 @@ def process_files_with_ai(delimiter: str = "###", min_count: int = 1,
         if should_exit:
             break
 
-        # Loading animatsiyasi
-        loading_complete = False
-        loading_thread = threading.Thread(target=animate_loading)
+        
+        # --- YANGI: har bir guruh uchun stop_event va loader thread ---
+        stop_event = threading.Event()
+        loading_thread = threading.Thread(target=utils.animate_loading, args=(stop_event,), daemon=True)
         loading_thread.start()
 
         try:
@@ -244,7 +131,8 @@ def process_files_with_ai(delimiter: str = "###", min_count: int = 1,
                 json_schema=API_SCHEMA
             ))
 
-            loading_complete = True
+            # --- YANGI: animatsiyani to'xtatish ---
+            stop_event.set()
             loading_thread.join()
 
             if result:
@@ -259,13 +147,14 @@ def process_files_with_ai(delimiter: str = "###", min_count: int = 1,
 
                 # Har 5 guruhdan keyin vaqtinchalik saqlash
                 if group_num % 5 == 0:
-                    save_partial_results(uniq_id)
+                    utils.save_partial_results(uniq_id)
             else:
                 print(
                     f"\rGuruh {group_num} uchun conversation olish muvaffaqiyatsiz tugadi")
 
         except Exception as e:
-            loading_complete = True
+            # --- YANGI: xatoda ham loaderni to'xtatish ---
+            stop_event.set()
             loading_thread.join()
             print(f"\rGuruh {group_num} ishlashda xato: {e}")
             continue
@@ -278,7 +167,7 @@ def process_files_with_ai(delimiter: str = "###", min_count: int = 1,
         # vaqt hisobini chiqaramiz
         utils.print_time_info(start_time)
         # Vaqtincha fayllarni o'chirish
-        clear_partial_results(uniq_id)
+        utils.clear_partial_results(uniq_id)
 
     except Exception as e:
         print(
