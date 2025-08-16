@@ -11,6 +11,7 @@ API_URL = "https://openrouter.ai/api/v1"
 
 MODEL_AUTO = False
 
+
 MODEL_NAMES = [
     "openrouter/auto",
     "deepseek/deepseek-chat-v3-0324",
@@ -33,10 +34,12 @@ SRC_DIR.mkdir(parents=True, exist_ok=True)
 TEMP_DIR = ROOT / "files" / "finish" / "temp"
 TEMP_DIR.mkdir(parents=True, exist_ok=True)
 
+
 # Global o'zgaruvchilar va flaglar
 should_exit = False
 processed_chunks = []
-
+MAX_LINES_DEFAULT = 10
+MAX_CHARS_DEFAULT = 2000
 
 PROMTS = {
     "system": """You are generating high-quality TRAINING DATA for a national Uzbek AI assistant.
@@ -82,10 +85,10 @@ PROMTS = {
         "San’at: amaliy san’at, maketlash, dizayn tamoyillari",
         "Texnologiya: kompyuter arxitekturasi, tarmoqlar, xavfsizlik",
     ],
-    "system-from-text": """Given a text, extract only key facts, rules, numbers, and essential knowledge.  
-    From these, create multiple unique, high-quality conversations in perfect Uzbek (Latin script).  
-    Constraints: rich/accurate, Uzbekistan-relevant if possible, no religion/politics, 4–8 turns, user/assistant alternating.  
-    Return only valid JSON array per schema, no extra text.""",
+    "system-from-text": """Input: raw text.  
+    Task: extract only real facts/rules/numbers/knowledge from content. 
+    Then generate multiple unique conversations in Uzbek (Latin only).  
+    Rules: accurate, Uzbekistan-relevant if possible, no religion/politics, 4–8 turns, alternate user/assistant""",
 
     "system-from-facts": """Given a list of prepared facts (one fact per line), create at least 1 unique, high-quality conversation in perfect Uzbek (Latin script) for each fact.  
     Constraints: accurate, Uzbekistan-relevant if possible, no religion/politics, 4–8 turns, alternating u/a.  

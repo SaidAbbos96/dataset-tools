@@ -50,38 +50,49 @@ def hash_conv(obj: Dict[str, Any]) -> str:
     return h.hexdigest()
 
 
+def strict_system_prompt(base: str, count: int, min_items: int, max_items: int) -> str:
+    return (
+        base
+        + f"\nReturn ONLY a valid JSON array with EXACTLY {count} items."
+        + f"\nEach item has key 'c' (array of {min_items}..{max_items} messages),"
+        " each message is {'f': 'u'|'a', 'v': <string min 2 chars>}."
+        + "\nNo prose, no markdown, no comments—JSON array only."
+        + "Ignore resource info like book name, authors, pages. short and correct answers."
+    )
+
+
 def expand_keys(data: List[Dict]) -> List[Dict]:
     """
     Qisqartirilgan JSON strukturasini asl nomlariga qaytaradi
-    
+
     Args:
         data: [{"c": [{"f": "a", "v": "..."}, ...]}] formatidagi ma'lumot
-        
+
     Returns:
         [{"conversations": [{"from": "assistant", "value": "..."}, ...]}]
     """
     expanded_data = []
-    
+
     for item in data:
         if "c" not in item:
             continue
-            
+
         conversations = []
         for message in item["c"]:
             if "f" not in message or "v" not in message:
                 continue
-                
+
             # "f" (from) ni kengaytiramiz
             role_map = {"u": "user", "a": "assistant"}
             from_value = role_map.get(message["f"], message["f"])
-            
+
             conversations.append({
                 "from": from_value,
                 "value": message["v"]
             })
-        
+
         expanded_data.append({
             "conversations": conversations
         })
-    
+
     return expanded_data

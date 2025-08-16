@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 import sys
 import threading
 import time
@@ -6,7 +7,8 @@ from typing import Dict, List, Union
 
 import uuid
 
-from config import TEMP_DIR, processed_chunks
+from config import SRC_DIR, TEMP_DIR, processed_chunks
+import config
 
 
 def generate_uuid(compact: bool = False) -> str:
@@ -70,6 +72,24 @@ def animate_loading(stop_event: threading.Event):
     sys.stdout.flush()
 
 
+def run_with_loader(fn, *args, **kwargs):
+    """
+    Loader animatsiyasi bilan bajarish: utils.animate_loading(stop_event) mavjud deb olamiz.
+    """
+    stop_event = threading.Event()
+    loader = threading.Thread(
+        target=animate_loading, args=(stop_event,), daemon=True)
+    loader.start()
+    try:
+        return fn(*args, **kwargs)
+    finally:
+        stop_event.set()
+        loader.join()
+        # chiziqni tozalash (ixtiyoriy)
+        sys.stdout.write("\r" + " " * 60 + "\r")
+        sys.stdout.flush()
+
+
 def clear_partial_results(id: str = "1"):
     for temp_file in TEMP_DIR.glob(f"partial_{id}*.json"):
         try:
@@ -78,15 +98,106 @@ def clear_partial_results(id: str = "1"):
             pass
 
 
-def save_partial_results(id: str = "1"):
-    if not processed_chunks:
+def save_partial_results(uniq_id: str,
+                         buffer: list,
+                         part_idx: int | None = None,
+                         temp_dir: Path = TEMP_DIR) -> None:
+    """
+    Vaqtinchalik natijalarni diskka yozadi.
+    - buffer: ayni paytdagi natijalar ro'yxati (aniq uzatiladi)
+    - part_idx: qaysi guruhgacha snapshot (ixtiyoriy)
+    - atomar yozish: .part -> final rename
+    """
+    if not buffer:
         return
 
-    timestamp = int(time.time())
-    temp_file = TEMP_DIR / f"partial_{id}_{timestamp}.json"
+    # Katalogni yaratib qo'yamiz
+    temp_dir.mkdir(parents=True, exist_ok=True)
+
+    # Mutatsiyadan saqlanish uchun snapshot olamiz
+    snapshot = list(buffer)
+
+    ts = int(time.time())
+    suffix = f"_part{part_idx}" if part_idx is not None else ""
+    final_path = temp_dir / f"partial_{uniq_id}{suffix}_{ts}.json"
+    part_path  = final_path.with_suffix(final_path.suffix + ".part")
 
     try:
-        save_data_as_json(temp_file, processed_chunks)
-        print(f"\nVaqtincha saqlangan natijalar: {temp_file}")
+        # Atomar yozish ketma-ketligi
+        with part_path.open("w", encoding="utf-8") as f:
+            json.dump(snapshot, f, ensure_ascii=False, indent=2)
+        part_path.replace(final_path)
+
+        print(f"\nVaqtincha saqlangan natijalar: {final_path}")
     except Exception as e:
         print(f"\nVaqtincha saqlashda xato: {e}")
+
+
+def choose_source_file() -> Path | None:
+    src_files = list(SRC_DIR.glob("*.txt"))
+    if not src_files:
+        print(f"SRC_DIR ({SRC_DIR}) da hech qanday .txt fayl topilmadi")
+        return None
+
+    print("\nMavjud fayllar:")
+    for i, file in enumerate(src_files, 1):
+        print(f"{i}. {file.name}")
+
+    try:
+        file_num = int(input("\nIshlamoqchi bo'lgan fayl raqamini kiriting: "))
+        return src_files[file_num - 1]
+    except (ValueError, IndexError):
+        print("Noto'g'ri raqam kiritildi")
+        return None
+
+
+def read_content_file(file_path: Path) -> str | None:
+    try:
+        return get_data_from_file(file_path)
+    except Exception as e:
+        print(f"Faylni o'qishda xato: {e}")
+        return None
+
+
+def split_chunks(content: str, delimiter: str) -> list[str]:
+    chunks = [c.strip() for c in content.split(delimiter) if c.strip()]
+    if not chunks:
+        print(
+            f"Faylda hech qanday ma'lumot topilmadi ('{delimiter}' bilan ajratilgan bo'laklar)")
+        return []
+    return chunks
+
+
+def batch_adaptive_by_chars(chunks: list[str],
+                            max_lines: int = config.MAX_LINES_DEFAULT,
+                            max_chars: int = config.MAX_CHARS_DEFAULT) -> list[list[str]]:
+    """
+    1) Har iteratsiyada  max_lines dan boshlaydi
+    2) "\n\n".join(group) uzunligi max_chars dan oshsa, lines-- qilib tekshiradi
+    3) Mos kelganda group => natijaga qo'shadi va ko'rsatkichni oldinga suradi
+    """
+    groups = []
+    i = 0
+    n = len(chunks)
+    while i < n:
+        lines = min(max_lines, n - i)
+        # kamida 1 qatorda bo'lsin
+        while lines > 0:
+            candidate = chunks[i:i + lines]
+            combined = "\n\n".join(candidate)
+            if len(combined) <= max_chars:
+                groups.append(candidate)
+                i += lines
+                break
+            lines -= 1
+
+        if lines == 0:
+            # Juda uzun bitta chunk bo'lsa, uni kesish (yoki log)
+            # Bu fallback: bitta chunk 2000+ bo‘lsa, minimal ishlash uchun trunc qilish yoki skip
+            # Bu yerda xavfsiz variant — trunc:
+            over = chunks[i]
+            safe = over[:max_chars]
+            groups.append([safe])
+            i += 1
+
+    return groups

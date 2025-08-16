@@ -31,9 +31,9 @@ def get_conversations(params: ConversationConfig) -> Union[List[Dict], bool]:
         messages.append({"role": "user", "content": params.user_prompt})
     if params.resource:
         messages.append(
-            {"role": "user", "content": f"info: {params.resource}"})
+            {"role": "user", "content": f"Text: {params.resource}"})
 
-    max_attempts = 3
+    max_attempts = 10
     for attempt in range(max_attempts):
         try:
             response = call_llm_api(
@@ -42,12 +42,13 @@ def get_conversations(params: ConversationConfig) -> Union[List[Dict], bool]:
                 messages=messages,
                 response_format_type="json_schema",
                 json_schema=params.json_schema,
-                max_tokens=2000,
+                max_tokens=5000,
                 top_p=0.95,
                 frequency_penalty=0.2,
-                presence_penalty=0.2
+                presence_penalty=0.2,
+                temperature=0
             )
-
+            # print(response)
             # Parse response if needed
             if isinstance(response, str):
                 response = json.loads(response)
@@ -70,3 +71,39 @@ def get_conversations(params: ConversationConfig) -> Union[List[Dict], bool]:
 
     print(f"All {max_attempts} attempts failed")
     return False
+
+
+def make_schema_for_count(min_count: int, max_count: int, min_items: int, max_items: int) -> dict:
+    # top-level array EXACT count
+        # Schema (min/max conversations sizning kiritingan parametrlar bilan hamohang bo‘lishi mumkin,
+    # ammo biz guruh uzunligiga teng (conv_count) yuboramiz)
+    return {
+        "name": "conversation_samples",
+        "schema": {
+            "type": "array",
+            "minItems": min_count,
+            "maxItems": max_count,
+            "items": {
+                "type": "object",
+                "additionalProperties": False,
+                "properties": {
+                    # "id": {"type": "string"},
+                    "c": {
+                        "type": "array",
+                        "minItems": min_items,
+                        "maxItems": max_items,
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": False,
+                            "properties": {
+                                "f": {"type": "string", "enum": ["u", "a"]},
+                                "v": {"type": "string", "minLength": 2}
+                            },
+                            "required": ["f", "v"]
+                        }
+                    }
+                },
+                "required": ["c"]
+            }
+        }
+    }
