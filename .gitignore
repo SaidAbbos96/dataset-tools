@@ -43,6 +43,7 @@ Thumbs.db
 #  - ignore **everything** inside /tools
 #  - except *.md files (so that tool READMEs remain visible in main branch)
 # -----------------------------------------------------------------------------
-tools/*
+tools/**/*
+!tools/*
 !tools/**/*.md
 
