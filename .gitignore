@@ -1,0 +1,48 @@
+# -----------------------------------------------------------------------------
+# ✅ COMMON IGNORE for MAIN branch (Python + Node + VSCode/WebStorm + env files)
+# -----------------------------------------------------------------------------
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtualenv / venv
+venv/
+.env/
+.venv/
+ENV/
+env/
+
+# NodeJS
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDEs
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# CursorAI / Code suggestions / experimental
+.cursor/
+.cursor-cache/
+
+# Logs
+*.log
+
+# -----------------------------------------------------------------------------
+# Tools folder rule  ✅
+#  - ignore **everything** inside /tools
+#  - except *.md files (so that tool READMEs remain visible in main branch)
+# -----------------------------------------------------------------------------
+tools/*
+!tools/**/*.md
+
