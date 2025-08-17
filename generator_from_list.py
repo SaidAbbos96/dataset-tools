@@ -101,10 +101,10 @@ def process_files_with_ai(delimiter: str = "###", min_count: int = 1,
         if should_exit:
             break
 
-        
         # --- YANGI: har bir guruh uchun stop_event va loader thread ---
         stop_event = threading.Event()
-        loading_thread = threading.Thread(target=utils.animate_loading, args=(stop_event,), daemon=True)
+        loading_thread = threading.Thread(
+            target=utils.animate_loading, args=(stop_event,), daemon=True)
         loading_thread.start()
 
         try:

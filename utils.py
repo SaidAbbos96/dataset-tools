@@ -52,10 +52,43 @@ def print_time_info(start_time: float):
 
 
 def signal_handler(sig, frame, id: str = "1"):
-    global should_exit
+    # Birinchi signalda ishlaydi, keyingilarini e'tiborsiz qoldirish uchun simple guard qo‘yish mumkin
     print("\nTizim to'xtatilmoqda... Joriy natijalarni saqlab olaman")
-    should_exit = True
-    save_partial_results(id)
+    # loaderni to'xtatamiz
+    try:
+        if config.current_loader_event is not None:
+            config.current_loader_event.set()
+    except Exception:
+        pass
+
+    # faqat SAQLANMAGAN qismini yozamiz: buffer[saved_index:]
+    try:
+        buf = config.processed_chunks
+        start = getattr(config, "saved_index", 0)
+        if start < len(buf):
+            new_slice = buf[start:]
+            if new_slice:
+                save_partial_results(id, new_slice, part_idx="SIGINT")
+                config.saved_index = len(buf)
+                print(f"[SIGINT] {len(new_slice)} ta yangi bo'lak saqlandi.")
+        else:
+            print("[SIGINT] Yangi saqlanadigan bo‘lak yo‘q.")
+    except Exception as e:
+        print(f"[SIGINT] Saqlashda xato: {e}")
+
+    # asosiy siklga chiqish signali
+    try:
+        # bu flagni asosiy sikl tekshiradi
+        import builtins
+        builtins.should_exit = True  # yoki config.should_exit = True
+    except Exception:
+        pass
+
+    # Jarayonni toza yopish (bloklangan joy bo‘lsa ham 130 exit code)
+    try:
+        sys.exit(130)
+    except SystemExit:
+        raise
 
 
 def animate_loading(stop_event: threading.Event):
@@ -73,19 +106,18 @@ def animate_loading(stop_event: threading.Event):
 
 
 def run_with_loader(fn, *args, **kwargs):
-    """
-    Loader animatsiyasi bilan bajarish: utils.animate_loading(stop_event) mavjud deb olamiz.
-    """
     stop_event = threading.Event()
-    loader = threading.Thread(
-        target=animate_loading, args=(stop_event,), daemon=True)
-    loader.start()
+    config.current_loader_event = stop_event
+    t = threading.Thread(target=animate_loading,
+                         args=(stop_event,), daemon=True)
+    t.start()
     try:
         return fn(*args, **kwargs)
     finally:
         stop_event.set()
-        loader.join()
-        # chiziqni tozalash (ixtiyoriy)
+        t.join()
+        config.current_loader_event = None
+        # konsolni tozalash ixtiyoriy
         sys.stdout.write("\r" + " " * 60 + "\r")
         sys.stdout.flush()
 
@@ -118,9 +150,10 @@ def save_partial_results(uniq_id: str,
     snapshot = list(buffer)
 
     ts = int(time.time())
-    suffix = f"_part{part_idx}" if part_idx is not None else ""
-    final_path = temp_dir / f"partial_{uniq_id}{suffix}_{ts}.json"
-    part_path  = final_path.with_suffix(final_path.suffix + ".part")
+    suffix = f"_part-{part_idx}" if part_idx is not None else ""
+    file_name = f"partial_{uniq_id}{suffix}_count-{len(snapshot)}_{ts}.json"
+    final_path = temp_dir / file_name
+    part_path = final_path.with_suffix(final_path.suffix + ".part")
 
     try:
         # Atomar yozish ketma-ketligi
@@ -128,7 +161,8 @@ def save_partial_results(uniq_id: str,
             json.dump(snapshot, f, ensure_ascii=False, indent=2)
         part_path.replace(final_path)
 
-        print(f"\nVaqtincha saqlangan natijalar: {final_path}")
+        print(
+            f"\nVaqtincha saqlangan natijalar ({len(snapshot)}) ta: {file_name}")
     except Exception as e:
         print(f"\nVaqtincha saqlashda xato: {e}")
 

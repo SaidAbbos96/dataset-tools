@@ -50,10 +50,10 @@ def hash_conv(obj: Dict[str, Any]) -> str:
     return h.hexdigest()
 
 
-def strict_system_prompt(base: str, count: int, min_items: int, max_items: int) -> str:
+def strict_system_prompt(base: str, min_count: int, max_count: int, min_items: int, max_items: int) -> str:
     return (
         base
-        + f"\nReturn ONLY a valid JSON array with EXACTLY {count} items."
+        + f"\nReturn ONLY a valid JSON array with EXACTLY minimum {min_count+2}-{max_count} items and more."
         + f"\nEach item has key 'c' (array of {min_items}..{max_items} messages),"
         " each message is {'f': 'u'|'a', 'v': <string min 2 chars>}."
         + "\nNo prose, no markdown, no comments—JSON array only."

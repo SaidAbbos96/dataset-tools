@@ -75,7 +75,7 @@ def get_conversations(params: ConversationConfig) -> Union[List[Dict], bool]:
 
 def make_schema_for_count(min_count: int, max_count: int, min_items: int, max_items: int) -> dict:
     # top-level array EXACT count
-        # Schema (min/max conversations sizning kiritingan parametrlar bilan hamohang bo‘lishi mumkin,
+    # Schema (min/max conversations sizning kiritingan parametrlar bilan hamohang bo‘lishi mumkin,
     # ammo biz guruh uzunligiga teng (conv_count) yuboramiz)
     return {
         "name": "conversation_samples",

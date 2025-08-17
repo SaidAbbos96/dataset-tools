@@ -1,5 +1,4 @@
 from pathlib import Path
-import threading
 from dotenv import load_dotenv
 import os
 
@@ -10,8 +9,7 @@ OPENROUTER_API_KEYS = os.getenv("OPENROUTER_API_KEYS").split(",")
 API_URL = "https://openrouter.ai/api/v1"
 
 MODEL_AUTO = False
-
-
+DEFAULT_API_KEY_INDEX = 0
 MODEL_NAMES = [
     "openrouter/auto",
     "deepseek/deepseek-chat-v3-0324",
@@ -38,6 +36,8 @@ TEMP_DIR.mkdir(parents=True, exist_ok=True)
 # Global o'zgaruvchilar va flaglar
 should_exit = False
 processed_chunks = []
+saved_index = 0
+current_loader_event = None  # signal_handler ko‘radi
 MAX_LINES_DEFAULT = 10
 MAX_CHARS_DEFAULT = 2000
 
