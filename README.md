@@ -80,5 +80,15 @@ requirements.txt
 
 src/, config/, venv/ va boshqa papkalar
 
+
+
+
+yangi branch yaratish va yuklash 
+git init
+git remote add origin https://github.com/SaidAbbos96/dataset-tools.git # ← GitHub URL
+git checkout -b dataset-files        # ← lokal branch
+git push -u origin dataset-files     # ← remote’ga jo‘natish
+
+
 bo‘lishi mumkin (mustaqil loyiha sifatida qaraladi).
 
