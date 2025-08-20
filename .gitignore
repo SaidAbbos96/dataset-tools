@@ -44,3 +44,4 @@ Thumbs.db
 # !files/finish/
 # !files/src/
 files/finish/*
+files/push.sh
