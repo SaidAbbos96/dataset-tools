@@ -167,7 +167,7 @@ def process_files_with_ai(delimiter: str = "###", min_count: int = 1,
         # vaqt hisobini chiqaramiz
         utils.print_time_info(start_time)
         # Vaqtincha fayllarni o'chirish
-        utils.clear_partial_results(uniq_id)
+        # utils.clear_partial_results(uniq_id)
 
     except Exception as e:
         print(

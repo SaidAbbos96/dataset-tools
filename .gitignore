@@ -43,3 +43,4 @@ Thumbs.db
 # !files/*
 # !files/finish/
 # !files/src/
+files/finish/*

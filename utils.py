@@ -1,14 +1,50 @@
 import json
+import os
 from pathlib import Path
 import sys
 import threading
 import time
-from typing import Dict, List, Union
+from typing import Dict, List, Literal, Optional, Union, Any
 
 import uuid
 
 from config import SRC_DIR, TEMP_DIR, processed_chunks
 import config
+
+
+def get_list_from_json_file(filepath: str) -> List[Any] | None:
+    """
+    Berilgan fayl yo'li (filepath) bo'yicha JSON faylni ochadi,
+    uning ichidagi ro'yxatni o'qib qaytaradi.
+
+    Args:
+        filepath: JSON faylning yo'li (string).
+
+    Returns:
+        JSON fayl ichidagi ro'yxatni (List) qaytaradi.
+        Agar fayl topilmasa, JSON xato bo'lsa yoki ichidagi ma'lumot
+        ro'yxat bo'lmasa, None qaytaradi.
+    """
+    file_path = Path(filepath)
+
+    if not file_path.exists():
+        print(f"Xato: '{filepath}' fayli topilmadi.")
+        return None
+
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            if isinstance(data, list):
+                return data
+            else:
+                print(f"Xato: JSON fayl ichidagi ma'lumot ro'yxat emas.")
+                return None
+    except json.JSONDecodeError:
+        print(f"Xato: '{filepath}' fayli yaroqsiz JSON formatida.")
+        return None
+    except Exception as e:
+        print(f"Kutilmagan xato: {e}")
+        return None
 
 
 def generate_uuid(compact: bool = False) -> str:
@@ -151,7 +187,7 @@ def save_partial_results(uniq_id: str,
 
     ts = int(time.time())
     suffix = f"_part-{part_idx}" if part_idx is not None else ""
-    file_name = f"partial_{uniq_id}{suffix}_count-{len(snapshot)}_{ts}.json"
+    file_name = f"partial_{uniq_id}{suffix}_c_{len(snapshot)}_{ts}.json"
     final_path = temp_dir / file_name
     part_path = final_path.with_suffix(final_path.suffix + ".part")
 
@@ -235,3 +271,70 @@ def batch_adaptive_by_chars(chunks: list[str],
             i += 1
 
     return groups
+
+
+
+
+# Literal yordamida mumkin bo'lgan qiymatlarni belgilaymiz
+SortBy = Literal['name', 'date', 'size', 'none']
+FilterBy = Literal['none', 'name', 'size_range']
+
+def find_files_by_pattern(
+    path: Path,
+    pattern: str,
+    sort_by: SortBy = 'name',
+    reverse_sort: bool = False,
+    min_size_kb: Optional[int] = None,
+    max_size_kb: Optional[int] = None,
+    filter_by_name: Optional[str] = None
+) -> List[Path]:
+    """
+    Berilgan yo'l (path) ichida, berilgan naqsh (pattern) bo'yicha fayllarni qidiradi
+    va ularni sortlash hamda filterlash imkoniyatini taqdim etadi.
+
+    Args:
+        path (Path): Fayllar qidiriladigan papkaning yo'li.
+        pattern (str): Qidirish naqshi (masalan, '*.json' yoki 'report_*.txt').
+        sort_by (SortBy): Fayllarni saralash mezoni ('name', 'date', 'size' yoki 'none').
+                          Default 'name'.
+        reverse_sort (bool): Saralash tartibini teskari qilish. Default False.
+        min_size_kb (Optional[int]): Minimal fayl hajmi (KB). None bo'lsa, hajm bo'yicha filterlanmaydi.
+        max_size_kb (Optional[int]): Maksimal fayl hajmi (KB). None bo'lsa, hajm bo'yicha filterlanmaydi.
+        filter_by_name (Optional[str]): Fayl nomida mavjud bo'lishi kerak bo'lgan matn.
+
+    Returns:
+        List[Path]: Filterdan o'tgan va saralangan fayllarning ro'yxati.
+    """
+    # 1. Pattern bo'yicha dastlabki fayllarni topish
+    found_files = list(path.glob(pattern))
+
+    if not found_files:
+        return []
+
+    # 2. Fayllarni filterlash
+    filtered_files = found_files
+    # Nom bo'yicha filter
+    if filter_by_name:
+        filtered_files = [
+            f for f in filtered_files if filter_by_name in f.name]
+
+    # Hajm bo'yicha filter
+    if min_size_kb is not None or max_size_kb is not None:
+        min_bytes = min_size_kb * 1024 if min_size_kb is not None else 0
+        max_bytes = max_size_kb * \
+            1024 if max_size_kb is not None else float('inf')
+        filtered_files = [
+            f for f in filtered_files if min_bytes <= os.path.getsize(f) <= max_bytes]
+
+    # 3. Fayllarni sortlash
+    if sort_by == 'date':
+        # Eng oxirgi o'zgartirilgan fayllar boshida bo'lishi uchun 'reverse=True' default bo'lishi mumkin
+        filtered_files.sort(key=os.path.getmtime, reverse=reverse_sort)
+    elif sort_by == 'size':
+        filtered_files.sort(key=os.path.getsize, reverse=reverse_sort)
+    elif sort_by == 'name':
+        # Nomi bo'yicha alifbo tartibida sort
+        filtered_files.sort(reverse=reverse_sort)
+    # 'none' bo'lsa, saralanmaydi
+
+    return filtered_files

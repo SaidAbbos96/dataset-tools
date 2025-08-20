@@ -157,14 +157,15 @@ def process_files_with_ai(
 
     # --- Yakuniy natijalar ---
     try:
-        output_file_name = f"{output_name}_count:{results_len}_{uniq_id}.json"
+        output_file_name = f"{output_name}_c_{results_len}_{uniq_id}.json"
         output_file = OUT_DIR / output_file_name
-        utils.save_data_as_json(output_file, results)
-        print(f"\nNatijalar muvaffaqiyatli saqlandi: {output_file_name}")
-        print(f"Jami {results_len} ta conversation generatsiya qilindi")
-        utils.print_time_info(start_time)
-        # tmp fayllarni tozalash (ixtiyoriy)
-        utils.clear_partial_results(uniq_id)
+        if utils.save_data_as_json(output_file, results):
+            print(f"\nNatijalar muvaffaqiyatli saqlandi: {output_file_name}")
+            print(f"Jami {results_len} ta conversation generatsiya qilindi")
+            utils.print_time_info(start_time)
+            # tmp fayllarni tozalash (ixtiyoriy)
+            # utils.clear_partial_results(uniq_id)
+
     except Exception as e:
         print(
             f"Natijalarni saqlashda yoki temp filelarni o'chirishda xatolik: {e}")
@@ -172,3 +173,4 @@ def process_files_with_ai(
 
 if __name__ == "__main__":
     process_files_with_ai("\n", min_count=5, max_lines_per_group=10)
+    

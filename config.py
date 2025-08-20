@@ -25,10 +25,11 @@ MODEL_NAMES = [
 
 ROOT = Path(__file__).resolve().parent
 SRC_DIR = ROOT / "files" / "source"
+ARCHIVE_DIR = ROOT / "files" / "finish" / "archive"
 OUT_DIR = ROOT / "files" / "finish"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 SRC_DIR.mkdir(parents=True, exist_ok=True)
-
+ARCHIVE_DIR.mkdir(parents=True, exist_ok=True)
 TEMP_DIR = ROOT / "files" / "finish" / "temp"
 TEMP_DIR.mkdir(parents=True, exist_ok=True)
 
