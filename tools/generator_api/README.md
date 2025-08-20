@@ -31,7 +31,6 @@ Boshqa branchlar yuklanmaydi — faqat shu branch keladi.
 git checkout tool-generator-api
 git pull origin tool-generator-api
 
-
 Branchga o‘tasiz va remote’dagi oxirgi versiyani yuklab olasiz.
 
 

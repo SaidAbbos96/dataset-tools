@@ -80,7 +80,12 @@ requirements.txt
 
 src/, config/, venv/ va boshqa papkalar
 
+3. Klon qilingan loyihada ushbu branch uchun so‘nggi yangilanishlarni yuklab olish
+git checkout tool-generator-api
+git pull origin tool-generator-api
 
+
+Branchga o‘tasiz va remote’dagi oxirgi versiyani yuklab olasiz.
 
 
 yangi branch yaratish va yuklash 
