@@ -19,3 +19,15 @@ source venv/bin/activate
 pip install -r requirements.txt
 
 python src/main.py
+
+
+
+# Tesseract OCR va tillarni o'rnatish
+sudo apt update
+sudo apt install tesseract-ocr
+sudo apt install tesseract-ocr-uzb
+sudo apt install tesseract-ocr-eng
+sudo apt install tesseract-ocr-rus
+
+# Python kutubxonalarini o'rnatish
+pip install PyMuPDF pillow pytesseract

@@ -39,7 +39,7 @@ Thumbs.db
 *.log
 
 #ishlanayotgan papkalarini taqiqlash
-files/**/*
-!files/*
-!files/finish/
-!files/src/test.pdf
+# files/**/*
+# !files/*
+# !files/finish/
+# !files/src/test.pdf
