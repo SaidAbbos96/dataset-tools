@@ -39,6 +39,8 @@ Thumbs.db
 *.log
 
 #ishlanayotgan papkalarini taqiqlash
+files/finish/src/invalid/
+
 # files/**/*
 # !files/*
 # !files/finish/
