@@ -35,3 +35,6 @@ Branchga o‘tasiz va remote’dagi oxirgi versiyani yuklab olasiz.
 
 
 Script fileni bajarish uchun chmod +x push.sh
+
+
+end
